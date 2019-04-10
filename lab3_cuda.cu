@@ -56,7 +56,7 @@ void SVD_and_PCA (int M,
     double *DtD = (double *) malloc (sizeof(double) * N * N);
     SimpleMatMul (Dt, D, DtD, N, M, N);
 
-    // PrintMatrix (Dt, N, M);
+    PrintMatrix (Dt, N, M);
     // PrintMatrix (D, M, N);
     // PrintMatrix (DtD, N, N);
     // printf("\n");
@@ -68,12 +68,12 @@ void SVD_and_PCA (int M,
             S[i][j] = DtD[i*N + j];
         }
     }
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            printf ("%.2f ", S[i][j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         printf ("%.2f ", S[i][j]);
+    //     }
+    //     printf("\n");
+    // }
 
     Jacobi (N);
     for (int i = 0; i < N; i++) {
@@ -107,6 +107,42 @@ void SVD_and_PCA (int M,
         }
         printf("\n");
     }
+
+    // Computing the SVD of D.T
+    // Vt = SIGMA-1.T * E.T * D.T
+    // U = E
+    double *ET = (double *) malloc (sizeof(double) * N * N);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            ET[i*N+j] = Et[i][j];
+        }
+    }
+    SimpleMatTrans (ET, *U, N, N);
+
+    double *SIGMAINV = (double *) malloc (sizeof(double *) * M * N);
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            SIGMAINV[i*N+j] = (i == j) * (1 / (*SIGMA)[j]);
+        }
+    }
+
+    double *ETDT = (double *) malloc (sizeof(double) * N * M);
+    SimpleMatMul (ET, Dt, ETDT, N, N, M);
+
+    SimpleMatMul (SIGMAINV, ETDT, *V_T, M, N, M);
+
+    printf("-----------\n");
+    PrintMatrix (*U, N, N);
+    printf("-----------\n");
+    PrintMatrix (*SIGMA, 1, N);
+    printf("-----------\n");
+    PrintMatrix (*V_T, M, M);
+
+    free (ET);
+    free (SIGMAINV);
+    free (ETDT);
+
+
 
     /*
     // Allocate the Memory on the device

@@ -6,7 +6,7 @@
 // 	*****************************************************
 // */
 
-const int BLOCK_SIZE = 16;
+const int BLOCK_SIZE = 1;
 
 __global__ void SVDkernel (int M, int N, double *D, double *U, double *SIGMA, double *V_T)
 {
@@ -15,8 +15,9 @@ __global__ void SVDkernel (int M, int N, double *D, double *U, double *SIGMA, do
 }
 
 // Function declarations
-void MatMul (double *dev_A, double *dev_B, double *dev_C, int m, int n, int p);
-void PrintMatrix (double *A, int M, int N);
+void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P);
+void MatTranspose (double *dev_A, double *dev_B, int M, int N);
+void PrintMatrix (double *A, int M, int N, int GPU=0);
 
 void SVD_and_PCA (int M, 
         int N, 
@@ -41,7 +42,14 @@ void SVD_and_PCA (int M,
     // cudaMemcpy (dev_SIGMA, *SIGMA, N*sizeof(double),   cudaMemcpyHostToDevice);
     // cudaMemcpy (dev_V_T,   *V_T,   M*M*sizeof(double), cudaMemcpyHostToDevice);
 
-    PrintMatrix (D, M, N);
+    MatTranspose (dev_D, dev_Dt, M, N);
+    // PrintMatrix (D, M, N);
+    PrintMatrix (dev_D, M, N, 1);
+    printf ("\n");
+    PrintMatrix (dev_Dt, N, M, 1);
+
+    MatMul (dev_D, dev_Dt, dev_V_T, M, N, M);
+    PrintMatrix (dev_V_T, M, M, 1);
     // Call the SVD Kernel
     // dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
     // dim3 dimGrid(N / dimBlock.x, M / dimBlock.y);
@@ -64,7 +72,8 @@ void SVD_and_PCA (int M,
 
 // Kernel declarations
 __global__ void MatMulKernel (double *A, double *B, double *C, int M, int N, int P);
-
+__global__ void MatTransKernel (double *A, double *B, int M, int N);
+__global__ void PrintMatrixKernel (double *A, int M, int N);
 
 void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P)
 {
@@ -73,7 +82,27 @@ void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P)
     MatMulKernel<<<dimGrid, dimBlock>>> (dev_A, dev_B, dev_C, M, N, P);
 }
 
-void PrintMatrix (double *A, int M, int N) {
+void MatTranspose (double *dev_A, double *dev_B, int M, int N)
+{
+    dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 dimGrid(N / dimBlock.x + 1, M / dimBlock.y + 1);
+    MatTransKernel<<<dimGrid, dimBlock>>> (dev_A, dev_B, M, N);
+}
+
+void PrintMatrix (double *A, int M, int N, int GPU) {
+    if (GPU == 0) {
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < N; j++) {
+                printf ("%f ", A[i*N + j]);
+            }
+            printf("\n");
+        }
+    } else {
+        PrintMatrixKernel<<<1,1>>> (A, M, N);
+    }
+}
+
+__global__ void PrintMatrixKernel (double *A, int M, int N) {
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++) {
             printf ("%f ", A[i*N + j]);
@@ -119,4 +148,12 @@ __global__ void MatMulKernel (double *A, double *B, double *C, int M, int N, int
 
     if (i < M && j < P)
         C[P*i + j] = Cval;
+}
+
+__global__ void MatTransKernel (double *A, double *B, int M, int N)
+{
+    int I = blockIdx.y * blockDim.y + threadIdx.y;
+    int J = blockIdx.x * blockDim.x + threadIdx.x;
+    if (I < M && J < N)
+        B[M*J + I] = A[N*I + J];
 }

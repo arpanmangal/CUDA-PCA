@@ -48,14 +48,14 @@ int main(int argc, char const *argv[])
         --------------------------------------------------------------------------------------
 	*/
 	// read_matrix (argv[1], &M, &N, &D);
-	N = 4;
-    M = 3;
-	double a[] = {5, 3, 0, 3, 2, 0, 0, 2, 8, 1, 6, 7};
+	N = 7;
+    M = 9;
+	// double a[] = {5, 3, 0, 3, 2, 0, 0, 2, 8, 1, 6, 7};
 	// double a[] = {4, 3, 0, -5};
     D = (double *) malloc (sizeof(double) * M * N);
 
 	for (int i = 0; i < M*N; i++)
-        D[i] = a[i];
+        D[i] = i;
 
 	printf("M, N: %d %d\n", M, N);
 

@@ -1,17 +1,10 @@
 #include "lab3_cuda.h"
-#include <iostream>
 
-// /*
-// 	*****************************************************
-// 		TODO -- You must implement this function
-// 	*****************************************************
-// */
-
-const int BLOCK_SIZE = 16;
+const int BLOCK_SIZE = 32;
 
 // Function declarations
 void MatMul (double *A, double *B, double *C, int M, int N, int P);
-void MatTranspose (double *dev_A, double *dev_B, int M, int N);
+// void MatTranspose (double *dev_A, double *dev_B, int M, int N);
 void PrintMatrix (double *A, int M, int N, int GPU=0);
 void SimpleMatMul(double* A, double *B, double *C, int m, int n, int p);
 void SimpleMatTrans (double *A, double *B, int m, int n);
@@ -23,9 +16,6 @@ void SortEigenVals (double *SIGMA, double **E_rows, int N);
 // JACOBI GLOBALS
 #define TOLERANCE 0.001
 #define JACOBI_UPDATE_TOLERANCE 0.001
-// #define FILENAME "testcase_1000_100"
-// #define samples 1000
-// #define features 100
 
 double **S; // Symmetric Matrix
 double *e; // eigenvalues
@@ -51,11 +41,6 @@ void SVD_and_PCA (int M,
     // SimpleMatMul (Dt, D, DtD, N, M, N);
     MatMul (Dt, D, DtD, N, M, N);
 
-    // PrintMatrix (Dt, N, M);
-    // PrintMatrix (D, M, N);
-    // PrintMatrix (DtD, N, N);
-    // printf("\n");
-
     S = (double **) malloc (sizeof(double*) * N);
     for (int i = 0; i < N; i++) {
         S[i] = (double *) malloc (sizeof(double) * N);
@@ -63,27 +48,8 @@ void SVD_and_PCA (int M,
             S[i][j] = DtD[i*N + j];
         }
     }
-    // for (int i = 0; i < N; i++) {
-    //     for (int j = 0; j < N; j++) {
-    //         printf ("%.2f ", S[i][j]);
-    //     }
-    //     printf("\n");
-    // }
 
     Jacobi (N);
-    // for (int i = 0; i < N; i++) {
-    //     printf ("%f ", e[i]);
-    // }
-    // printf ("\n");
-
-    // for (int i = 0; i < N; i++) {
-    //     for (int j = 0; j < N; j++) {
-    //         printf ("%.3f ", E[i][j]);
-    //     }
-    //     printf("\n");
-    // }
-
-    // printf("-----------\n");
     double **Et = (double **) malloc (sizeof(double*) * N);
     for (int i = 0; i < N; i++) {
         Et[i] = (double *) malloc (sizeof(double) * N);
@@ -92,16 +58,6 @@ void SVD_and_PCA (int M,
         }
     }
     SortEigenVals (*SIGMA, Et, N);
-    // for (int i = 0; i < N; i++) {
-    //     printf ("%.3f ", (*SIGMA)[i]);
-    // }
-    // printf ("\n");
-    // for (int i = 0; i < N; i++) {
-    //     for (int j = 0; j < N; j++) {
-    //         printf ("%.3f ", Et[i][j]);
-    //     }
-    //     printf("\n");
-    // }
 
     // Computing the SVD of D.T
     // Vt = SIGMA-1.T * E.T * D.T
@@ -114,50 +70,20 @@ void SVD_and_PCA (int M,
     }
     SimpleMatTrans (ET, *U, N, N);
 
-    // double *SIGMAINV = (double *) malloc (sizeof(double *) * M * N);
-    // for (int i = 0; i < M; i++) {
-    //     for (int j = 0; j < N; j++) {
-    //         SIGMAINV[i*N+j] = (i == j) * (1 / (*SIGMA)[j]);
-    //     }
-    // }
-
-    // double *ETDT = (double *) malloc (sizeof(double) * N * M);
-    // SimpleMatMul (ET, Dt, ETDT, N, N, M);
-
-    // SimpleMatMul (SIGMAINV, ETDT, *V_T, M, N, M);
-
-    // printf("-----------\n");
-    // PrintMatrix (*U, N, N);
-    // printf("-----------\n");
-    // PrintMatrix (*SIGMA, 1, N);
-    // printf("-----------\n");
-    // PrintMatrix (*V_T, M, M);
-
-    // free (ET);
-    // free (SIGMAINV);
-    // free (ETDT);
-
-
-    // printf ("hey\n");
     // PCA COMPUTATION
     double totSigma = 0.0;
     for (int i = 0; i < N; i++) {
         totSigma += (*SIGMA)[i] * (*SIGMA)[i];
     }
 
-    // printf ("%f\n", totSigma);
-
     double cumSigma = 0.0;
     for (int i = 0; i < N; i++) {
         cumSigma += (*SIGMA)[i] * (*SIGMA)[i];
-        // printf ("%f\n", cumSigma);
         if (cumSigma / totSigma >= retention / 100.0) {
             *K = i + 1;
             break;
         }
     }
-
-    // printf ("%d\n", *K);
 
     double *W = (double *) malloc (sizeof(double) * N * (*K));
     *D_HAT = (double *) malloc (sizeof(double) * M * (*K));
@@ -167,51 +93,10 @@ void SVD_and_PCA (int M,
             W[i * (*K) + j] = (*U)[i * N + j];
         }
     }
-    // PrintMatrix (W, N, *K);
+
     // SimpleMatMul (D, W, *D_HAT, M, N, *K);
     MatMul (D, W, *D_HAT, M, N, *K);
     free (W);
-
-    /*
-    // Allocate the Memory on the device
-    double *dev_D, *dev_Dt, *dev_U, *dev_SIGMA, *dev_V_T;
-    cudaMalloc ((void **) &dev_D, M*N*sizeof(double));
-    cudaMalloc ((void **) &dev_Dt, N*M*sizeof(double));
-    // cudaMalloc ((void **) &dev_U, N*N*sizeof(double));
-    // cudaMalloc ((void **) &dev_SIGMA, N*sizeof(double));
-    // cudaMalloc ((void **) &dev_V_T, M*M*sizeof(double));
-
-    cudaMemcpy (dev_D,     D,      M*N*sizeof(double), cudaMemcpyHostToDevice);
-    // cudaMemcpy (dev_U,     *U,     N*N*sizeof(double), cudaMemcpyHostToDevice);
-    // cudaMemcpy (dev_SIGMA, *SIGMA, N*sizeof(double),   cudaMemcpyHostToDevice);
-    // cudaMemcpy (dev_V_T,   *V_T,   M*M*sizeof(double), cudaMemcpyHostToDevice);
-
-    MatTranspose (dev_D, dev_Dt, M, N);
-    // // PrintMatrix (D, M, N);
-    // PrintMatrix (dev_D, M, N, 1);
-    // printf ("\n");
-    // PrintMatrix (dev_Dt, N, M, 1);
-
-    // MatMul (dev_D, dev_Dt, dev_V_T, M, N, M);
-    // PrintMatrix (dev_V_T, M, M, 1);
-    // Call the SVD Kernel
-    // dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-    // dim3 dimGrid(N / dimBlock.x, M / dimBlock.y);
-    // SVDkernel<<<dimGrid, dimBlock>>> (M, N, dev_D, dev_U, dev_SIGMA, dev_V_T);
-
-
-    // Clean-up
-    // cudaMemcpy (*U,     dev_U,     N*N*sizeof(double), cudaMemcpyDeviceToHost);
-    // cudaMemcpy (*SIGMA, dev_SIGMA, N*sizeof(double),   cudaMemcpyDeviceToHost);
-    // cudaMemcpy (*V_T,   dev_V_T,   M*M*sizeof(double), cudaMemcpyDeviceToHost);
-
-    cudaFree(dev_D);
-    cudaFree(dev_Dt);
-    // cudaFree(dev_U);
-    // cudaFree(dev_SIGMA);
-    // cudaFree(dev_V_T);
-
-    */
 }
 
 // Jacobi Stuff
@@ -221,9 +106,6 @@ void update (int k, double t);
 void rotate(int k, int l, int i, int j, double c, double s, bool eigenvectors);
 
 void Jacobi(int N) {
-    // N = n;
-    // S = input_matrix;
-
     init_jacobi(N);
 
     while(state != 0){
@@ -378,7 +260,7 @@ void SortEigenVals (double *SIGMA, double **E_rows, int N) {
 // CUDA Stuff
 // Kernel declarations
 __global__ void MatMulKernel (double *A, double *B, double *C, int M, int N, int P);
-__global__ void MatTransKernel (double *A, double *B, int M, int N);
+// __global__ void MatTransKernel (double *A, double *B, int M, int N);
 __global__ void PrintMatrixKernel (double *A, int M, int N);
 
 void SimpleMatMul(double* A, double *B, double *C, int m, int n, int p){
@@ -417,12 +299,12 @@ void MatMul (double *A, double *B, double *C, int M, int N, int P)
     cudaFree (dev_C);
 }
 
-void MatTranspose (double *dev_A, double *dev_B, int M, int N)
-{
-    dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 dimGrid(N / dimBlock.x + 1, M / dimBlock.y + 1);
-    MatTransKernel<<<dimGrid, dimBlock>>> (dev_A, dev_B, M, N);
-}
+// void MatTranspose (double *dev_A, double *dev_B, int M, int N)
+// {
+//     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+//     dim3 dimGrid(N / dimBlock.x + 1, M / dimBlock.y + 1);
+//     MatTransKernel<<<dimGrid, dimBlock>>> (dev_A, dev_B, M, N);
+// }
 
 void PrintMatrix (double *A, int M, int N, int GPU) {
     if (GPU == 0) {
@@ -485,10 +367,10 @@ __global__ void MatMulKernel (double *A, double *B, double *C, int M, int N, int
         C[P*i + j] = Cval;
 }
 
-__global__ void MatTransKernel (double *A, double *B, int M, int N)
-{
-    int I = blockIdx.y * blockDim.y + threadIdx.y;
-    int J = blockIdx.x * blockDim.x + threadIdx.x;
-    if (I < M && J < N)
-        B[M*J + I] = A[N*I + J];
-}
+// __global__ void MatTransKernel (double *A, double *B, int M, int N)
+// {
+//     int I = blockIdx.y * blockDim.y + threadIdx.y;
+//     int J = blockIdx.x * blockDim.x + threadIdx.x;
+//     if (I < M && J < N)
+//         B[M*J + I] = A[N*I + J];
+// }

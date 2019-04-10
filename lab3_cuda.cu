@@ -18,6 +18,25 @@ __global__ void SVDkernel (int M, int N, double *D, double *U, double *SIGMA, do
 void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P);
 void MatTranspose (double *dev_A, double *dev_B, int M, int N);
 void PrintMatrix (double *A, int M, int N, int GPU=0);
+void SimpleMatMul(double* A, double *B, double *C, int m, int n, int p);
+void SimpleMatTrans (double *A, double *B, int m, int n);
+
+// void Jacobi (double *S, int N, double *e, double **E);
+void Jacobi(int N);
+
+// JACOBI GLOBALS
+#define TOLERANCE 0.001
+#define JACOBI_UPDATE_TOLERANCE 0.001
+// #define FILENAME "testcase_1000_100"
+// #define samples 1000
+// #define features 100
+
+double **S; // Symmetric Matrix
+double *e; // eigenvalues
+double **E; // eigenvectors
+int *ind;
+bool *changed;
+int state;
 
 void SVD_and_PCA (int M, 
         int N, 
@@ -29,13 +48,51 @@ void SVD_and_PCA (int M,
         int *K,
         int retention) 
 {
+    double* Dt = (double *) malloc (sizeof(double) * N * M);
+    SimpleMatTrans (D, Dt, M, N);
+
+    double *DtD = (double *) malloc (sizeof(double) * N * N);
+    SimpleMatMul (Dt, D, DtD, N, M, N);
+
+    // PrintMatrix (Dt, N, M);
+    // PrintMatrix (D, M, N);
+    // PrintMatrix (DtD, N, N);
+    // printf("\n");
+
+    S = (double **) malloc (sizeof(double*) * N);
+    for (int i = 0; i < N; i++) {
+        S[i] = (double *) malloc (sizeof(double) * N);
+        for (int j = 0; j < N; j++) {
+            S[i][j] = DtD[i*N + j];
+        }
+    }
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            printf ("%.2f ", S[i][j]);
+        }
+        printf("\n");
+    }
+
+    Jacobi (N);
+    for (int i = 0; i < N; i++) {
+        printf ("%f ", e[i]);
+    }
+    printf ("\n");
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            printf ("%.3f ", E[i][j]);
+        }
+        printf("\n");
+    }
+    /*
     // Allocate the Memory on the device
     double *dev_D, *dev_Dt, *dev_U, *dev_SIGMA, *dev_V_T;
     cudaMalloc ((void **) &dev_D, M*N*sizeof(double));
     cudaMalloc ((void **) &dev_Dt, N*M*sizeof(double));
-    cudaMalloc ((void **) &dev_U, N*N*sizeof(double));
-    cudaMalloc ((void **) &dev_SIGMA, N*sizeof(double));
-    cudaMalloc ((void **) &dev_V_T, M*M*sizeof(double));
+    // cudaMalloc ((void **) &dev_U, N*N*sizeof(double));
+    // cudaMalloc ((void **) &dev_SIGMA, N*sizeof(double));
+    // cudaMalloc ((void **) &dev_V_T, M*M*sizeof(double));
 
     cudaMemcpy (dev_D,     D,      M*N*sizeof(double), cudaMemcpyHostToDevice);
     // cudaMemcpy (dev_U,     *U,     N*N*sizeof(double), cudaMemcpyHostToDevice);
@@ -43,13 +100,13 @@ void SVD_and_PCA (int M,
     // cudaMemcpy (dev_V_T,   *V_T,   M*M*sizeof(double), cudaMemcpyHostToDevice);
 
     MatTranspose (dev_D, dev_Dt, M, N);
-    // PrintMatrix (D, M, N);
-    PrintMatrix (dev_D, M, N, 1);
-    printf ("\n");
-    PrintMatrix (dev_Dt, N, M, 1);
+    // // PrintMatrix (D, M, N);
+    // PrintMatrix (dev_D, M, N, 1);
+    // printf ("\n");
+    // PrintMatrix (dev_Dt, N, M, 1);
 
-    MatMul (dev_D, dev_Dt, dev_V_T, M, N, M);
-    PrintMatrix (dev_V_T, M, M, 1);
+    // MatMul (dev_D, dev_Dt, dev_V_T, M, N, M);
+    // PrintMatrix (dev_V_T, M, M, 1);
     // Call the SVD Kernel
     // dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
     // dim3 dimGrid(N / dimBlock.x, M / dimBlock.y);
@@ -63,17 +120,199 @@ void SVD_and_PCA (int M,
 
     cudaFree(dev_D);
     cudaFree(dev_Dt);
-    cudaFree(dev_U);
-    cudaFree(dev_SIGMA);
-    cudaFree(dev_V_T);
+    // cudaFree(dev_U);
+    // cudaFree(dev_SIGMA);
+    // cudaFree(dev_V_T);
 
+    */
 }
 
+// Jacobi Stuff
+void init_jacobi(int N);
+int maxind (int k, int N);
+void update (int k, double t);
+void rotate(int k, int l, int i, int j, double c, double s, bool eigenvectors);
+double** mat_mul(double** A, int Am, int An, 
+    double** B, int Bm, int Bn);
+void Jacobi(int N) {
+    // N = n;
+    // S = input_matrix;
 
+    init_jacobi(N);
+
+    while(state != 0){
+        int m = 0;
+
+        for (int k=1; k<N-1; k++){
+            if (fabs(S[k][ind[k]]) > fabs(S[m][ind[m]])){
+                m = k;
+            }
+        }
+
+        int k = m;
+        int l = ind[m];
+        double p = S[k][l];
+        double y = (e[l] - e[k]) / 2.0;
+        double d = fabs(y) + sqrt(p*p + y*y);
+        double r = sqrt(p*p + d*d);
+        double c = d / r;
+        double s = p / r;
+        double t = (p*p) / d;
+
+        if (y < 0.0) { s = -s; t = -t; }
+
+        S[k][l] = 0.0;
+        update(k, -t);
+        update(l, t);
+
+        for (int i=0; i<k; i++)  { rotate(i, k, i, l, c, s, false); }
+        for (int i=k+1; i<l; i++){ rotate(k, i, i, l, c, s, false); }
+        for (int i=l+1; i<N; i++)  { rotate(k, i, l, i, c, s, false); }
+
+        for (int i=0; i<N; i++){
+            rotate(k, l, i, i, c, s, true);
+        }
+
+        ind[k] = maxind(k, N);
+        ind[l] = maxind(l, N);
+    }
+}
+
+void init_jacobi(int N) {
+    E = (double**) malloc(__SIZEOF_POINTER__*N);
+    for (int i=0; i<N; i++){
+        E[i] = (double*)malloc(__SIZEOF_DOUBLE__*N);
+        for (int j=0; j<N; j++){
+            E[i][j] = 0;
+        }
+        E[i][i] = 1;
+    }
+
+    state = N;
+
+    e = (double*)malloc(__SIZEOF_DOUBLE__*N);
+    ind = (int*)malloc(__SIZEOF_INT__*N);
+    changed = (bool*)malloc(sizeof(bool)*N);
+
+    for (int k=0; k<N; k++){
+        ind[k]     = maxind(k, N);
+        e[k]       = S[k][k];
+        changed[k] = true;
+    }
+}
+
+int maxind(int k, int N) {
+    int m = k+1;
+    for (int i = k+2; i < N; i++){
+        if (fabs(S[k][i]) > fabs(S[k][m])){
+            m = i;
+        }
+    }
+    return m;
+}
+
+void update(int k, double t) {
+    double ek_prev = e[k];
+    e[k] = ek_prev + t;
+
+    if (e[k] < 0) e[k] = 0;
+
+    if (changed[k] && (ek_prev - e[k]) < JACOBI_UPDATE_TOLERANCE) {
+        changed[k] = false;
+        state = state - 1;
+    }
+    else if ((! changed[k]) && (ek_prev - e[k]) > JACOBI_UPDATE_TOLERANCE) {
+        changed[k] = true;
+        state = state + 1;
+    }
+}
+
+void rotate(int k, int l, int i, int j, double c, double s, bool eigenvectors){
+    double** mat1;
+    double** mat2;
+    double** mat3;
+
+    mat1 = (double**)malloc(__SIZEOF_POINTER__*2);
+    mat1[0] = (double*)malloc(__SIZEOF_DOUBLE__*2);
+    mat1[1] = (double*)malloc(__SIZEOF_DOUBLE__*2);
+    mat1[0][0] = c; mat1[0][1] = -s;
+    mat1[1][0] = s; mat1[1][1] = c;
+
+    mat2 = (double**)malloc(__SIZEOF_POINTER__*2);
+    mat2[0] = (double*)malloc(__SIZEOF_DOUBLE__*1);
+    mat2[1] = (double*)malloc(__SIZEOF_DOUBLE__*1);
+    if (eigenvectors){
+        mat2[0][0] = E[i][k];
+        mat2[1][0] = E[i][l];
+    }
+    else {
+        mat2[0][0] = S[k][l];
+        mat2[1][0] = S[i][j];
+    }
+
+    mat3 = mat_mul(mat1, 2, 2, mat2, 2, 1);
+
+    if (eigenvectors){
+        E[i][k] = mat3[0][0];
+        E[i][l] = mat3[1][0];
+    }
+    else{
+        S[k][l] = mat3[0][0];
+        S[i][j] = mat3[1][0];
+    }
+
+    free(mat1[0]);
+    free(mat1[1]);
+    free(mat1);
+    free(mat2[0]);
+    free(mat2[1]);
+    free(mat2);
+    free(mat3[0]);
+    free(mat3[1]);
+    free(mat3);
+}
+
+double** mat_mul(double** A, int Am, int An, 
+                 double** B, int Bm, int Bn){
+    double **C;
+    C = (double**)malloc(__SIZEOF_POINTER__*Am);
+    for (int i=0; i<Am; i++)
+        C[i] = (double*)malloc(__SIZEOF_DOUBLE__*Bn);
+
+    for (int i=0; i<Am; i++){
+        for (int j=0; j<Bn; j++){
+            C[i][j] = 0;
+            for (int k=0; k<An; k++){
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+
+    return C;
+}
+
+// CUDA Stuff
 // Kernel declarations
 __global__ void MatMulKernel (double *A, double *B, double *C, int M, int N, int P);
 __global__ void MatTransKernel (double *A, double *B, int M, int N);
 __global__ void PrintMatrixKernel (double *A, int M, int N);
+
+void SimpleMatMul(double* A, double *B, double *C, int m, int n, int p){
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < p; j++) {
+            C[i*p + j] = 0.0;
+            for (int k = 0; k < n; k++) {
+                C[i*p + j] += A[i*n + k] * B[k*p + j];
+            }
+        }
+    }
+}
+
+void SimpleMatTrans (double *A, double *B, int m, int n) {
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            B[j*m + i] = A[i*n + j];
+}
 
 void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P)
 {

@@ -70,10 +70,10 @@ void SVD_and_PCA (int M,
     // }
 
     Jacobi (N);
-    for (int i = 0; i < N; i++) {
-        printf ("%f ", e[i]);
-    }
-    printf ("\n");
+    // for (int i = 0; i < N; i++) {
+    //     printf ("%f ", e[i]);
+    // }
+    // printf ("\n");
 
     // for (int i = 0; i < N; i++) {
     //     for (int j = 0; j < N; j++) {
@@ -82,7 +82,7 @@ void SVD_and_PCA (int M,
     //     printf("\n");
     // }
 
-    printf("-----------\n");
+    // printf("-----------\n");
     double **Et = (double **) malloc (sizeof(double*) * N);
     for (int i = 0; i < N; i++) {
         Et[i] = (double *) malloc (sizeof(double) * N);
@@ -91,10 +91,10 @@ void SVD_and_PCA (int M,
         }
     }
     SortEigenVals (*SIGMA, Et, N);
-    for (int i = 0; i < N; i++) {
-        printf ("%.3f ", (*SIGMA)[i]);
-    }
-    printf ("\n");
+    // for (int i = 0; i < N; i++) {
+    //     printf ("%.3f ", (*SIGMA)[i]);
+    // }
+    // printf ("\n");
     // for (int i = 0; i < N; i++) {
     //     for (int j = 0; j < N; j++) {
     //         printf ("%.3f ", Et[i][j]);
@@ -113,50 +113,50 @@ void SVD_and_PCA (int M,
     }
     SimpleMatTrans (ET, *U, N, N);
 
-    double *SIGMAINV = (double *) malloc (sizeof(double *) * M * N);
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            SIGMAINV[i*N+j] = (i == j) * (1 / (*SIGMA)[j]);
-        }
-    }
+    // double *SIGMAINV = (double *) malloc (sizeof(double *) * M * N);
+    // for (int i = 0; i < M; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         SIGMAINV[i*N+j] = (i == j) * (1 / (*SIGMA)[j]);
+    //     }
+    // }
 
-    double *ETDT = (double *) malloc (sizeof(double) * N * M);
-    SimpleMatMul (ET, Dt, ETDT, N, N, M);
+    // double *ETDT = (double *) malloc (sizeof(double) * N * M);
+    // SimpleMatMul (ET, Dt, ETDT, N, N, M);
 
-    SimpleMatMul (SIGMAINV, ETDT, *V_T, M, N, M);
+    // SimpleMatMul (SIGMAINV, ETDT, *V_T, M, N, M);
 
     // printf("-----------\n");
     // PrintMatrix (*U, N, N);
-    printf("-----------\n");
-    PrintMatrix (*SIGMA, 1, N);
-    printf("-----------\n");
+    // printf("-----------\n");
+    // PrintMatrix (*SIGMA, 1, N);
+    // printf("-----------\n");
     // PrintMatrix (*V_T, M, M);
 
-    free (ET);
-    free (SIGMAINV);
-    free (ETDT);
+    // free (ET);
+    // free (SIGMAINV);
+    // free (ETDT);
 
 
-    printf ("hey\n");
+    // printf ("hey\n");
     // PCA COMPUTATION
     double totSigma = 0.0;
     for (int i = 0; i < N; i++) {
         totSigma += (*SIGMA)[i] * (*SIGMA)[i];
     }
 
-    printf ("%f\n", totSigma);
+    // printf ("%f\n", totSigma);
 
     double cumSigma = 0.0;
     for (int i = 0; i < N; i++) {
         cumSigma += (*SIGMA)[i] * (*SIGMA)[i];
-        printf ("%f\n", cumSigma);
+        // printf ("%f\n", cumSigma);
         if (cumSigma / totSigma >= retention / 100.0) {
             *K = i + 1;
             break;
         }
     }
 
-    printf ("%d\n", *K);
+    // printf ("%d\n", *K);
 
     double *W = (double *) malloc (sizeof(double) * N * (*K));
     *D_HAT = (double *) malloc (sizeof(double) * M * (*K));
@@ -166,7 +166,7 @@ void SVD_and_PCA (int M,
             W[i * (*K) + j] = (*U)[i * N + j];
         }
     }
-    PrintMatrix (W, N, *K);
+    // PrintMatrix (W, N, *K);
     SimpleMatMul (D, W, *D_HAT, M, N, *K);
     free (W);
 
@@ -217,8 +217,7 @@ void init_jacobi(int N);
 int maxind (int k, int N);
 void update (int k, double t);
 void rotate(int k, int l, int i, int j, double c, double s, bool eigenvectors);
-double** mat_mul(double** A, int Am, int An, 
-    double** B, int Bm, int Bn);
+
 void Jacobi(int N) {
     // N = n;
     // S = input_matrix;
@@ -313,67 +312,18 @@ void update(int k, double t) {
 }
 
 void rotate(int k, int l, int i, int j, double c, double s, bool eigenvectors){
-    double** mat1;
-    double** mat2;
-    double** mat3;
-
-    mat1 = (double**)malloc(__SIZEOF_POINTER__*2);
-    mat1[0] = (double*)malloc(__SIZEOF_DOUBLE__*2);
-    mat1[1] = (double*)malloc(__SIZEOF_DOUBLE__*2);
-    mat1[0][0] = c; mat1[0][1] = -s;
-    mat1[1][0] = s; mat1[1][1] = c;
-
-    mat2 = (double**)malloc(__SIZEOF_POINTER__*2);
-    mat2[0] = (double*)malloc(__SIZEOF_DOUBLE__*1);
-    mat2[1] = (double*)malloc(__SIZEOF_DOUBLE__*1);
     if (eigenvectors){
-        mat2[0][0] = E[i][k];
-        mat2[1][0] = E[i][l];
-    }
-    else {
-        mat2[0][0] = S[k][l];
-        mat2[1][0] = S[i][j];
-    }
-
-    mat3 = mat_mul(mat1, 2, 2, mat2, 2, 1);
-
-    if (eigenvectors){
-        E[i][k] = mat3[0][0];
-        E[i][l] = mat3[1][0];
+        double t = c * E[i][k] - s * E[i][l];
+        double b = s * E[i][k] + c * E[i][l];
+        E[i][k] = t;
+        E[i][l] = b; 
     }
     else{
-        S[k][l] = mat3[0][0];
-        S[i][j] = mat3[1][0];
+        double t = c * S[k][l] - s * S[i][j];
+        double b = s * S[k][l] + c * S[i][j];
+        S[k][l] = t;
+        S[i][j] = b; 
     }
-
-    free(mat1[0]);
-    free(mat1[1]);
-    free(mat1);
-    free(mat2[0]);
-    free(mat2[1]);
-    free(mat2);
-    free(mat3[0]);
-    free(mat3[1]);
-    free(mat3);
-}
-
-double** mat_mul(double** A, int Am, int An, 
-                 double** B, int Bm, int Bn){
-    double **C;
-    C = (double**)malloc(__SIZEOF_POINTER__*Am);
-    for (int i=0; i<Am; i++)
-        C[i] = (double*)malloc(__SIZEOF_DOUBLE__*Bn);
-
-    for (int i=0; i<Am; i++){
-        for (int j=0; j<Bn; j++){
-            C[i][j] = 0;
-            for (int k=0; k<An; k++){
-                C[i][j] += A[i][k] * B[k][j];
-            }
-        }
-    }
-
-    return C;
 }
 
 struct pair {

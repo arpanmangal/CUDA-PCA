@@ -36,8 +36,8 @@ void write_result (int M,
 		double* D_HAT,
 		double computation_time){
 	// Will contain output code
-	// printMatrix (U, N, N);
-    // printMatrix (SIGMA, 1, N);
+	printMatrix (U, N, N);
+    printMatrix (SIGMA, 1, N);
 	printf("\n%d %d %d\n\n", M, N, K);
-	// printMatrix (D_HAT, M, K);
+	printMatrix (D_HAT, M, K);
 }

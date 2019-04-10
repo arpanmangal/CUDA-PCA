@@ -10,7 +10,7 @@
 const int BLOCK_SIZE = 16;
 
 // Function declarations
-void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P);
+void MatMul (double *A, double *B, double *C, int M, int N, int P);
 void MatTranspose (double *dev_A, double *dev_B, int M, int N);
 void PrintMatrix (double *A, int M, int N, int GPU=0);
 void SimpleMatMul(double* A, double *B, double *C, int m, int n, int p);
@@ -48,7 +48,8 @@ void SVD_and_PCA (int M,
     SimpleMatTrans (D, Dt, M, N);
 
     double *DtD = (double *) malloc (sizeof(double) * N * N);
-    SimpleMatMul (Dt, D, DtD, N, M, N);
+    // SimpleMatMul (Dt, D, DtD, N, M, N);
+    MatMul (Dt, D, DtD, N, M, N);
 
     // PrintMatrix (Dt, N, M);
     // PrintMatrix (D, M, N);
@@ -167,7 +168,8 @@ void SVD_and_PCA (int M,
         }
     }
     // PrintMatrix (W, N, *K);
-    SimpleMatMul (D, W, *D_HAT, M, N, *K);
+    // SimpleMatMul (D, W, *D_HAT, M, N, *K);
+    MatMul (D, W, *D_HAT, M, N, *K);
     free (W);
 
     /*
@@ -396,11 +398,23 @@ void SimpleMatTrans (double *A, double *B, int m, int n) {
             B[j*m + i] = A[i*n + j];
 }
 
-void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P)
+void MatMul (double *A, double *B, double *C, int M, int N, int P)
 {
+    double *dev_A, *dev_B, *dev_C;
+    cudaMalloc ((void **) &dev_A, M*N*sizeof(double));
+    cudaMalloc ((void **) &dev_B, N*P*sizeof(double));
+    cudaMalloc ((void **) &dev_C, M*P*sizeof(double));
+    cudaMemcpy (dev_A, A, M*N*sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy (dev_B, B, N*P*sizeof(double), cudaMemcpyHostToDevice);
+    
     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
     dim3 dimGrid(P / dimBlock.x + 1, M / dimBlock.y + 1);
     MatMulKernel<<<dimGrid, dimBlock>>> (dev_A, dev_B, dev_C, M, N, P);
+
+    cudaMemcpy (C, dev_C, M*P*sizeof(double), cudaMemcpyDeviceToHost);
+    cudaFree (dev_A);
+    cudaFree (dev_B);
+    cudaFree (dev_C);
 }
 
 void MatTranspose (double *dev_A, double *dev_B, int M, int N)

@@ -47,15 +47,15 @@ int main(int argc, char const *argv[])
         | D[0][0] | D[0][1] | ... | D[0][N-1] | D[1][0] | ... | D[1][N-1] | ... | D[M-1][N-1] |
         --------------------------------------------------------------------------------------
 	*/
-	// read_matrix (argv[1], &M, &N, &D);
-	M = 4;
-    N = 3;
-	double a[] = {5, 3, 0, 3, 2, 0, 0, 2, 8, 1, 6, 7};
+	read_matrix (argv[1], &M, &N, &D);
+	// M = 4;
+    // N = 3;
+	// double a[] = {5, 3, 0, 3, 2, 0, 0, 2, 8, 1, 6, 7};
 	// double a[] = {4, 3, 0, -5};
-    D = (double *) malloc (sizeof(double) * M * N);
+    // D = (double *) malloc (sizeof(double) * M * N);
 
-	for (int i = 0; i < M*N; i++)
-        D[i] = a[i];
+	// for (int i = 0; i < M*N; i++)
+        // D[i] = a[i];
 
 	printf("M, N: %d %d\n", M, N);
 
@@ -78,7 +78,7 @@ int main(int argc, char const *argv[])
 	cudaEventRecord(stop);
 	cudaEventElapsedTime(&computation_time, start, stop);
 	
-	// printf ("Time taken: %.3f\n", computation_time);
+	printf ("Time taken: %.3f\n", computation_time);
 	/*
 		--Pre-defined functions --
 		checks for correctness of results computed by SVD and PCA

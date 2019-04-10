@@ -7,13 +7,7 @@
 // 	*****************************************************
 // */
 
-const int BLOCK_SIZE = 1;
-
-__global__ void SVDkernel (int M, int N, double *D, double *U, double *SIGMA, double *V_T)
-{
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    double *A = (double *) malloc (100*100*sizeof(double));
-}
+const int BLOCK_SIZE = 16;
 
 // Function declarations
 void MatMul (double *dev_A, double *dev_B, double *dev_C, int M, int N, int P);
@@ -56,7 +50,7 @@ void SVD_and_PCA (int M,
     double *DtD = (double *) malloc (sizeof(double) * N * N);
     SimpleMatMul (Dt, D, DtD, N, M, N);
 
-    PrintMatrix (Dt, N, M);
+    // PrintMatrix (Dt, N, M);
     // PrintMatrix (D, M, N);
     // PrintMatrix (DtD, N, N);
     // printf("\n");
@@ -81,12 +75,12 @@ void SVD_and_PCA (int M,
     }
     printf ("\n");
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            printf ("%.3f ", E[i][j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         printf ("%.3f ", E[i][j]);
+    //     }
+    //     printf("\n");
+    // }
 
     printf("-----------\n");
     double **Et = (double **) malloc (sizeof(double*) * N);
@@ -101,12 +95,12 @@ void SVD_and_PCA (int M,
         printf ("%.3f ", (*SIGMA)[i]);
     }
     printf ("\n");
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            printf ("%.3f ", Et[i][j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         printf ("%.3f ", Et[i][j]);
+    //     }
+    //     printf("\n");
+    // }
 
     // Computing the SVD of D.T
     // Vt = SIGMA-1.T * E.T * D.T
@@ -131,18 +125,50 @@ void SVD_and_PCA (int M,
 
     SimpleMatMul (SIGMAINV, ETDT, *V_T, M, N, M);
 
-    printf("-----------\n");
-    PrintMatrix (*U, N, N);
+    // printf("-----------\n");
+    // PrintMatrix (*U, N, N);
     printf("-----------\n");
     PrintMatrix (*SIGMA, 1, N);
     printf("-----------\n");
-    PrintMatrix (*V_T, M, M);
+    // PrintMatrix (*V_T, M, M);
 
     free (ET);
     free (SIGMAINV);
     free (ETDT);
 
 
+    printf ("hey\n");
+    // PCA COMPUTATION
+    double totSigma = 0.0;
+    for (int i = 0; i < N; i++) {
+        totSigma += (*SIGMA)[i] * (*SIGMA)[i];
+    }
+
+    printf ("%f\n", totSigma);
+
+    double cumSigma = 0.0;
+    for (int i = 0; i < N; i++) {
+        cumSigma += (*SIGMA)[i] * (*SIGMA)[i];
+        printf ("%f\n", cumSigma);
+        if (cumSigma / totSigma >= retention / 100.0) {
+            *K = i + 1;
+            break;
+        }
+    }
+
+    printf ("%d\n", *K);
+
+    double *W = (double *) malloc (sizeof(double) * N * (*K));
+    *D_HAT = (double *) malloc (sizeof(double) * M * (*K));
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < *K; j++) {
+            W[i * (*K) + j] = (*U)[i * N + j];
+        }
+    }
+    PrintMatrix (W, N, *K);
+    SimpleMatMul (D, W, *D_HAT, M, N, *K);
+    free (W);
 
     /*
     // Allocate the Memory on the device

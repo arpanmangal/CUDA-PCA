@@ -1,4 +1,5 @@
 #include "lab3_cuda.h"
+#include <iostream>
 
 // /*
 // 	*****************************************************
@@ -23,6 +24,7 @@ void SimpleMatTrans (double *A, double *B, int m, int n);
 
 // void Jacobi (double *S, int N, double *e, double **E);
 void Jacobi(int N);
+void SortEigenVals (double *SIGMA, double **E_rows, int N);
 
 // JACOBI GLOBALS
 #define TOLERANCE 0.001
@@ -85,6 +87,27 @@ void SVD_and_PCA (int M,
         }
         printf("\n");
     }
+
+    printf("-----------\n");
+    double **Et = (double **) malloc (sizeof(double*) * N);
+    for (int i = 0; i < N; i++) {
+        Et[i] = (double *) malloc (sizeof(double) * N);
+        for (int j = 0; j < N; j++) {
+            Et[i][j] = DtD[i*N + j];
+        }
+    }
+    SortEigenVals (*SIGMA, Et, N);
+    for (int i = 0; i < N; i++) {
+        printf ("%.3f ", (*SIGMA)[i]);
+    }
+    printf ("\n");
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            printf ("%.3f ", Et[i][j]);
+        }
+        printf("\n");
+    }
+
     /*
     // Allocate the Memory on the device
     double *dev_D, *dev_Dt, *dev_U, *dev_SIGMA, *dev_V_T;
@@ -290,6 +313,53 @@ double** mat_mul(double** A, int Am, int An,
 
     return C;
 }
+
+struct pair {
+    double e;
+    int idx;
+};
+
+void OddEvenSort (struct pair* A, int N)
+{
+    int exch = 1, start = 0;
+    while (exch || start) {
+        exch = 0;
+        for (int i = start; i < N - 1; i += 2) {
+            if (A[i].e < A[i+1].e) {
+                // Swap them
+                double tmp = A[i].e;
+                A[i].e = A[i+1].e;
+                A[i+1].e = tmp;
+
+                int tmpIdx = A[i].idx;
+                A[i].idx = A[i+1].idx;
+                A[i+1].idx = tmpIdx;
+
+                exch = 1;
+            }
+        }
+        if (start == 0) start = 1;
+        else start = 0;
+    }
+}
+
+void SortEigenVals (double *SIGMA, double **E_rows, int N) {
+    struct pair *EigenVals = (struct pair *) malloc (sizeof(struct pair) * N);
+    for (int i = 0; i < N; i++) {
+        EigenVals[i].e = sqrt(abs(e[i]));
+        EigenVals[i].idx = i;
+    }
+    OddEvenSort (EigenVals, N);
+
+    for (int i = 0; i < N; i++) {
+        SIGMA[i] = EigenVals[i].e;
+        int r = EigenVals[i].idx;
+        for (int j = 0; j < N; j++) {
+            E_rows[i][j] = E[j][r];
+        }
+    }
+}
+
 
 // CUDA Stuff
 // Kernel declarations

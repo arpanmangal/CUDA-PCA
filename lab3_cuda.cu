@@ -206,11 +206,11 @@ void update(int k, double t) {
 
     if (e[k] < 0) e[k] = 0;
 
-    if (changed[k] && (ek_prev - e[k]) < JACOBI_UPDATE_TOLERANCE) {
+    if (changed[k] && fabs(ek_prev - e[k]) < JACOBI_UPDATE_TOLERANCE) {
         changed[k] = false;
         state = state - 1;
     }
-    else if ((! changed[k]) && (ek_prev - e[k]) > JACOBI_UPDATE_TOLERANCE) {
+    else if ((! changed[k]) && fabs(ek_prev - e[k]) > JACOBI_UPDATE_TOLERANCE) {
         changed[k] = true;
         state = state + 1;
     }
@@ -231,48 +231,17 @@ void rotate(int k, int l, int i, int j, double c, double s, bool eigenvectors){
     }
 }
 
-struct pair {
-    double e;
-    int idx;
-};
-
-void OddEvenSort (struct pair* A, int N)
-{
-    int exch = 1, start = 0;
-    while (exch || start) {
-        exch = 0;
-        for (int i = start; i < N - 1; i += 2) {
-            if (A[i].e < A[i+1].e) {
-                // Swap them
-                double tmp = A[i].e;
-                A[i].e = A[i+1].e;
-                A[i+1].e = tmp;
-
-                int tmpIdx = A[i].idx;
-                A[i].idx = A[i+1].idx;
-                A[i+1].idx = tmpIdx;
-
-                exch = 1;
-            }
-        }
-        if (start == 0) start = 1;
-        else start = 0;
-    }
-}
-
 bool compare (std::pair<double, int> &p1, std::pair<double, int> &p2) {
     return (p1.first > p2.first);
 }
 
 void SortEigenVals (double *SIGMA, double **E_rows, int N) {
     std::vector<std::pair<double, int>> EigenVals (N);
-    // struct pair *EigenVals = (struct pair *) malloc (sizeof(struct pair) * N);
     for (int i = 0; i < N; i++) {
         EigenVals[i].first = sqrt(abs(e[i]));
         EigenVals[i].second = i;
     }
     std::sort(EigenVals.begin(), EigenVals.end(), compare);
-    // OddEvenSort (EigenVals, N);
 
     for (int i = 0; i < N; i++) {
         SIGMA[i] = EigenVals[i].first;

@@ -30,6 +30,8 @@ void SVD_and_PCA (int M,
         double** U, 
         double** SIGMA, 
         double** V_T, 
+        int* SIGMAm,
+        int* SIGMAn, 
         double** D_HAT, 
         int *K,
         int retention) 

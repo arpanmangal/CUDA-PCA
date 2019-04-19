@@ -36,6 +36,14 @@ void SVD_and_PCA (int M,
         int *K,
         int retention) 
 {
+    // Computing the SVD of D.T
+    *SIGMAm = N;
+    *SIGMAn = M;
+
+    *U = (double *) malloc (sizeof(double) * N * N);
+    *SIGMA = (double *) malloc (sizeof(double) * N);
+    *V_T = (double *) malloc (sizeof(double) * M * M);
+
     double* Dt = (double *) malloc (sizeof(double) * N * M);
     SimpleMatTrans (D, Dt, M, N);
 
@@ -55,9 +63,9 @@ void SVD_and_PCA (int M,
     double **Et = (double **) malloc (sizeof(double*) * N);
     for (int i = 0; i < N; i++) {
         Et[i] = (double *) malloc (sizeof(double) * N);
-        for (int j = 0; j < N; j++) {
-            Et[i][j] = DtD[i*N + j];
-        }
+        // for (int j = 0; j < N; j++) {
+        //     Et[i][j] = DtD[i*N + j];
+        // }
     }
     SortEigenVals (*SIGMA, Et, N);
 
@@ -71,6 +79,14 @@ void SVD_and_PCA (int M,
         }
     }
     SimpleMatTrans (ET, *U, N, N);
+
+    double *SIGMA_T_INV_U_T = (double *) malloc (sizeof(double) * M * N);
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++) {
+            SIGMA_T_INV_U_T[i*N+j] = (i < N) ? ((1.0 / (*SIGMA)[i]) * ET[i*N+j]) : 0;
+        }
+    }
+    MatMul (SIGMA_T_INV_U_T, Dt, *V_T, M, N, M);
 
     // PCA COMPUTATION
     double totSigma = 0.0;

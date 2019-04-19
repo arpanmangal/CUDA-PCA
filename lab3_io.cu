@@ -56,7 +56,7 @@ void checkSVD (int M,
 	MatMulCk (U, FULL_SIGMA, D_intermediate, SIGMAm, SIGMAm, SIGMAn);
 	MatMulCk (D_intermediate, V_T, D_ours, SIGMAm, SIGMAn, SIGMAn);
 
-	double epsilon = 1e-2;
+	double epsilon = 1e-6;
 	bool incorrect = false;
 	if (SIGMAm == M && SIGMAn == N) {
 		printf ("Done SVD of D\n");
@@ -79,9 +79,9 @@ void checkSVD (int M,
 	}
 	printf ("Correctness status %d\n", incorrect);
 
-	printMatrix (U, SIGMAm, SIGMAm);
-	printMatrix (FULL_SIGMA, SIGMAm, SIGMAn);
-	printMatrix (V_T, SIGMAn, SIGMAn);
+	// printMatrix (U, SIGMAm, SIGMAm);
+	// printMatrix (FULL_SIGMA, SIGMAm, SIGMAn);
+	// printMatrix (V_T, SIGMAn, SIGMAn);
 }
 
 void write_result (int M, 
@@ -98,8 +98,8 @@ void write_result (int M,
 	// Will contain output code
 
 	printf ("Time taken: %.3f\n", computation_time);
-	checkSVD (M, N, D, U, SIGMA, V_T, SIGMAm, SIGMAn);
 	// printMatrix (SIGMA, 1, N);
+	checkSVD (M, N, D, U, SIGMA, V_T, SIGMAm, SIGMAn);
 	printf("\n%d %d %d\n\n", M, N, K);
 	// printMatrix (D_HAT, M, K);
 }

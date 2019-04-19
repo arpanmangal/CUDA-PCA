@@ -1,4 +1,6 @@
 #include "lab3_cuda.h"
+#include <vector>
+#include <algorithm>
 
 const int BLOCK_SIZE = 32;
 
@@ -86,6 +88,7 @@ void SVD_and_PCA (int M,
             SIGMA_T_INV_U_T[i*N+j] = (i < N) ? ((1.0 / (*SIGMA)[i]) * ET[i*N+j]) : 0;
         }
     }
+    // SimpleMatMul (SIGMA_T_INV_U_T, Dt, *V_T, M, N, M);
     MatMul (SIGMA_T_INV_U_T, Dt, *V_T, M, N, M);
 
     // PCA COMPUTATION
@@ -257,17 +260,23 @@ void OddEvenSort (struct pair* A, int N)
     }
 }
 
+bool compare (std::pair<double, int> &p1, std::pair<double, int> &p2) {
+    return (p1.first > p2.first);
+}
+
 void SortEigenVals (double *SIGMA, double **E_rows, int N) {
-    struct pair *EigenVals = (struct pair *) malloc (sizeof(struct pair) * N);
+    std::vector<std::pair<double, int>> EigenVals (N);
+    // struct pair *EigenVals = (struct pair *) malloc (sizeof(struct pair) * N);
     for (int i = 0; i < N; i++) {
-        EigenVals[i].e = sqrt(abs(e[i]));
-        EigenVals[i].idx = i;
+        EigenVals[i].first = sqrt(abs(e[i]));
+        EigenVals[i].second = i;
     }
-    OddEvenSort (EigenVals, N);
+    std::sort(EigenVals.begin(), EigenVals.end(), compare);
+    // OddEvenSort (EigenVals, N);
 
     for (int i = 0; i < N; i++) {
-        SIGMA[i] = EigenVals[i].e;
-        int r = EigenVals[i].idx;
+        SIGMA[i] = EigenVals[i].first;
+        int r = EigenVals[i].second;
         for (int j = 0; j < N; j++) {
             E_rows[i][j] = E[j][r];
         }
